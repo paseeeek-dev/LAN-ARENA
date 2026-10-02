@@ -1,6 +1,6 @@
 # LAN ARENA v0.1
 
-Frontend/backend prototype of a LAN esports tournament platform built with Next.js.
+LAN esports tournament platform prototype built with Next.js.
 
 ## Quick start
 
@@ -11,43 +11,31 @@ npm run dev
 
 Open http://localhost:3000
 
-On Windows you can also run `run-site.bat`.
+## Production configuration
 
-## Admin account
-
-For local development, if no environment variables are set, the project uses these **demo-only** credentials:
-
-- email: `admin@lanarena.local`
-- password: `lan-arena-demo`
-
-For any public/production deployment, create `.env.local` (or configure environment variables in your hosting service):
+Set these environment variables in the hosting service:
 
 ```env
 ADMIN_EMAIL=your-admin-email@example.com
 ADMIN_PASSWORD=use-a-strong-unique-password
+SESSION_SECRET=use-another-long-random-secret
 ```
 
-`ADMIN_PASSWORD` is required in production and is never stored in the repository. `.env*` files are ignored by Git, except `.env.example`.
+`ADMIN_PASSWORD` is required in production. Secrets are not stored in the repository.
 
-## Local data
+## Storage
 
-Runtime accounts, password hashes and session tokens are stored locally in `data/lan-arena.json`. This file and temporary database files are ignored by Git and are not included in the shareable project archive.
+- Local development: `data/lan-arena.json` (ignored by Git).
+- Netlify: persistent site-wide Netlify Blobs storage.
 
-## What is implemented
+This keeps registered users, sessions, teams, tournaments and other runtime data available across serverless invocations and new deploys.
+
+## Implemented
 
 - responsive home page and navigation
-- tournaments, matches, teams and players pages
+- tournaments, matches, teams and players
 - registration and login
-- server-side sessions via HttpOnly cookies
-- account roles
+- HttpOnly server-side sessions
+- account roles and organizer tools
 - team/tournament flows
 - LAN Points and predictions
-- dark esports UI
-
-## Security notes
-
-- user passwords are stored as salted `scrypt` hashes, not plaintext
-- session tokens are generated with cryptographically secure random bytes
-- session cookie is `HttpOnly` and `SameSite=Lax`
-- local database/session files and environment secrets are excluded from Git
-- production startup requires an explicit admin password

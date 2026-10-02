@@ -1,7 +1,7 @@
 import 'server-only'
 import { createHmac, timingSafeEqual } from 'crypto'
 import { NextRequest } from 'next/server'
-import { publicUser, readDb, UserRecord } from './db'
+import { publicUser, readDb, UserRecord, DbShape } from './db'
 
 export const SESSION_COOKIE = 'lan_arena_session'
 
@@ -45,8 +45,8 @@ function verifySessionToken(token?: string | null): { userId: string; expiresAt:
   }
 }
 
-export function authFromRequest(request: NextRequest): { db: ReturnType<typeof readDb>; user: UserRecord | null } {
-  const db = readDb()
+export async function authFromRequest(request: NextRequest): Promise<{ db: DbShape; user: UserRecord | null }> {
+  const db = await readDb()
   const token = request.cookies.get(SESSION_COOKIE)?.value
   const session = verifySessionToken(token)
   const user = session ? db.users.find((item) => item.id === session.userId) || null : null

@@ -2,6 +2,7 @@ import 'server-only'
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto'
 import { mkdirSync, existsSync, readFileSync, writeFileSync } from 'fs'
 import path from 'path'
+import { getStore } from '@netlify/blobs'
 
 export type Role = 'VIEWER' | 'PLAYER' | 'ADMIN' | 'ORGANIZER'
 export type DotaPosition = '1' | '2' | '3' | '4' | '5' | 'SUB'
@@ -157,9 +158,9 @@ export type DbShape = {
 
 const DATA_DIR = path.join(process.cwd(), 'data')
 const DATA_FILE = path.join(DATA_DIR, 'lan-arena.json')
-const IS_SERVERLESS = process.env.NETLIFY === 'true' || Boolean(process.env.AWS_LAMBDA_FUNCTION_NAME)
-
-const runtimeState = globalThis as typeof globalThis & { __lanArenaDb?: DbShape }
+const IS_NETLIFY = Boolean(process.env.NETLIFY || process.env.SITE_ID || process.env.NETLIFY_BLOBS_CONTEXT)
+const BLOB_STORE = 'lan-arena-db'
+const BLOB_KEY = 'state'
 
 export const ADMIN_EMAIL = process.env.ADMIN_EMAIL?.trim() || 'admin@lanarena.local'
 
@@ -266,26 +267,31 @@ function migrateDb(parsed: DbShape) {
   return parsed
 }
 
-export function readDb(): DbShape {
-  if (IS_SERVERLESS) {
-    if (!runtimeState.__lanArenaDb) runtimeState.__lanArenaDb = seedDb()
-    return migrateDb(runtimeState.__lanArenaDb)
+export async function readDb(): Promise<DbShape> {
+  if (IS_NETLIFY) {
+    const store = getStore({ name: BLOB_STORE, consistency: 'strong' })
+    const existing = await store.get(BLOB_KEY, { type: 'json', consistency: 'strong' }) as DbShape | null
+    if (existing) return migrateDb(existing)
+
+    const fresh = seedDb()
+    await store.setJSON(BLOB_KEY, fresh)
+    return fresh
   }
 
   ensureDb()
   try {
-    const parsed = migrateDb(JSON.parse(readFileSync(DATA_FILE, 'utf8')) as DbShape)
-    return parsed
+    return migrateDb(JSON.parse(readFileSync(DATA_FILE, 'utf8')) as DbShape)
   } catch {
     const fresh = seedDb()
-    writeDb(fresh)
+    await writeDb(fresh)
     return fresh
   }
 }
 
-export function writeDb(db: DbShape) {
-  if (IS_SERVERLESS) {
-    runtimeState.__lanArenaDb = db
+export async function writeDb(db: DbShape): Promise<void> {
+  if (IS_NETLIFY) {
+    const store = getStore({ name: BLOB_STORE, consistency: 'strong' })
+    await store.setJSON(BLOB_KEY, db)
     return
   }
 
