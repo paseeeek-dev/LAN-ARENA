@@ -4,7 +4,7 @@ import { writeDb } from '@/lib/server/db'
 
 export async function POST(request:NextRequest, context:{params:Promise<{id:string}>}) {
   const { id } = await context.params
-  const { db, user } = authFromRequest(request)
+  const { db, user } = await authFromRequest(request)
   if (!user) return NextResponse.json({error:'Сначала войди.'},{status:401})
   const membership = db.teamMembers.find((m)=>m.userId===user.id)
   if (!membership) return NextResponse.json({error:'Ты не состоишь в команде.'},{status:400})
@@ -14,6 +14,6 @@ export async function POST(request:NextRequest, context:{params:Promise<{id:stri
   if (!registration) return NextResponse.json({error:'Команда не зарегистрирована.'},{status:404})
   if (registration.status!=='APPROVED') return NextResponse.json({error:'Сначала организатор должен одобрить заявку.'},{status:400})
   registration.checkIn='CHECKED_IN'
-  writeDb(db)
+  await writeDb(db)
   return NextResponse.json({ok:true})
 }

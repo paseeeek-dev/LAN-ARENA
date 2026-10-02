@@ -2,40 +2,37 @@
 
 LAN esports tournament platform prototype built with Next.js.
 
-## Quick start
+## Local start
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open http://localhost:3000
+Open `http://localhost:3000`.
 
-## Production configuration
+## Netlify deployment
 
-Set these environment variables in the hosting service:
+The production build stores app data in **Netlify Blobs**, so registration, login and project data persist across serverless requests and deploys.
+
+Set these environment variables in Netlify before deploying:
 
 ```env
-ADMIN_EMAIL=your-admin-email@example.com
-ADMIN_PASSWORD=use-a-strong-unique-password
-SESSION_SECRET=use-another-long-random-secret
+ADMIN_EMAIL=admin@lanarena.ru
+ADMIN_PASSWORD=your-strong-password
 ```
 
-`ADMIN_PASSWORD` is required in production. Secrets are not stored in the repository.
-
-## Storage
-
-- Local development: `data/lan-arena.json` (ignored by Git).
-- Netlify: persistent site-wide Netlify Blobs storage.
-
-This keeps registered users, sessions, teams, tournaments and other runtime data available across serverless invocations and new deploys.
+`SESSION_SECRET` is optional; when omitted, `ADMIN_PASSWORD` is also used to sign sessions.
 
 ## Implemented
 
-- responsive home page and navigation
-- tournaments, matches, teams and players
-- registration and login
-- HttpOnly server-side sessions
-- account roles and organizer tools
-- team/tournament flows
-- LAN Points and predictions
+- registration and login with HttpOnly session cookies
+- viewer/player/admin roles
+- teams and tournament flows
+- organizer panel
+- matches, predictions and LAN Points
+- responsive esports UI
+
+## Security
+
+Passwords are stored as salted `scrypt` hashes. Production data is stored in Netlify Blobs and secrets stay in Netlify environment variables, not in the repository.

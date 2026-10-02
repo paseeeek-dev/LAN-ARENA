@@ -3,8 +3,8 @@ import { authFromRequest } from '@/lib/server/auth'
 import { readDb, tournamentView } from '@/lib/server/db'
 
 export async function GET(request: NextRequest) {
-  const { user } = authFromRequest(request)
-  const db = readDb()
+  const { user } = await authFromRequest(request)
+  const db = await readDb()
   const myMembership = user ? db.teamMembers.find((m)=>m.userId===user.id) || null : null
   const tournaments = db.tournaments.map((t)=>{
     const view = tournamentView(db,t)

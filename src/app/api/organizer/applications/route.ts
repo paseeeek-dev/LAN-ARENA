@@ -3,13 +3,13 @@ import { authFromRequest, isOrganizer } from '@/lib/server/auth'
 import { writeDb } from '@/lib/server/db'
 
 export async function GET(request: NextRequest) {
-  const { db, user } = authFromRequest(request)
+  const { db, user } = await authFromRequest(request)
   if (!isOrganizer(user)) return NextResponse.json({ error: 'Нет доступа.' }, { status: 403 })
   return NextResponse.json({ applications: db.applications })
 }
 
 export async function PATCH(request: NextRequest) {
-  const { db, user } = authFromRequest(request)
+  const { db, user } = await authFromRequest(request)
   if (!isOrganizer(user)) return NextResponse.json({ error: 'Нет доступа.' }, { status: 403 })
   const body = await request.json().catch(() => ({}))
   const id = Number(body.id)
@@ -18,6 +18,6 @@ export async function PATCH(request: NextRequest) {
   const application = db.applications.find((item) => item.id === id)
   if (!application) return NextResponse.json({ error: 'Заявка не найдена.' }, { status: 404 })
   application.status = status
-  writeDb(db)
+  await writeDb(db)
   return NextResponse.json({ application })
 }

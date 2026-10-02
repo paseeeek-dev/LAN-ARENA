@@ -2,6 +2,7 @@ import 'server-only'
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto'
 import { mkdirSync, existsSync, readFileSync, writeFileSync } from 'fs'
 import path from 'path'
+import { getStore } from '@netlify/blobs'
 
 export type Role = 'VIEWER' | 'PLAYER' | 'ADMIN' | 'ORGANIZER'
 export type DotaPosition = '1' | '2' | '3' | '4' | '5' | 'SUB'
@@ -157,23 +158,11 @@ export type DbShape = {
 
 const DATA_DIR = path.join(process.cwd(), 'data')
 const DATA_FILE = path.join(DATA_DIR, 'lan-arena.json')
+const IS_NETLIFY = Boolean(process.env.NETLIFY || process.env.SITE_ID || process.env.NETLIFY_BLOBS_CONTEXT)
+const BLOB_STORE = 'lan-arena-db'
+const BLOB_KEY = 'state'
 
-export const ADMIN_EMAIL = process.env.ADMIN_EMAIL?.trim() || 'admin@lanarena.local'
-
-function getAdminPassword() {
-  const password = process.env.ADMIN_PASSWORD?.trim()
-  if (password) {
-    if (password.length < 8) throw new Error('ADMIN_PASSWORD must be at least 8 characters long.')
-    return password
-  }
-
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('ADMIN_PASSWORD must be set in the environment before starting production.')
-  }
-
-  // Local-development fallback only. This is a public demo credential, not a secret.
-  return 'lan-arena-demo'
-}
+export const ADMIN_EMAIL = process.env.ADMIN_EMAIL?.trim().toLowerCase() || 'admin@lanarena.ru'
 
 export function hashPassword(password: string) {
   const salt = randomBytes(16).toString('hex')
@@ -194,17 +183,7 @@ function seedDb(): DbShape {
   const minute = 60_000
   const day = 24 * 60 * minute
   return {
-    users: [
-      {
-        id: 'admin',
-        username: 'LAN Admin',
-        email: ADMIN_EMAIL,
-        passwordHash: hashPassword(getAdminPassword()),
-        role: 'ADMIN',
-        points: 5000,
-        createdAt: now,
-      },
-    ],
+    users: [],
     matches: [
       { id: 1, teamA: 'Team Phoenix', teamB: 'Void Five', event: 'Moscow Dota LAN Cup', startAt: now + 8 * minute, endAt: now + 78 * minute, communityA: 62, communityB: 38, winner: null },
       { id: 2, teamA: 'Northern Wolves', teamB: 'Cyber Bears', event: 'Northern Clash', startAt: now + 105 * minute, endAt: now + 175 * minute, communityA: 47, communityB: 53, winner: null },
@@ -263,19 +242,34 @@ function migrateDb(parsed: DbShape) {
   return parsed
 }
 
-export function readDb(): DbShape {
+export async function readDb(): Promise<DbShape> {
+  if (IS_NETLIFY) {
+    const store = getStore({ name: BLOB_STORE, consistency: 'strong' })
+    const existing = await store.get(BLOB_KEY, { type: 'json', consistency: 'strong' }) as DbShape | null
+    if (existing) return migrateDb(existing)
+
+    const fresh = seedDb()
+    await store.setJSON(BLOB_KEY, fresh)
+    return fresh
+  }
+
   ensureDb()
   try {
-    const parsed = migrateDb(JSON.parse(readFileSync(DATA_FILE, 'utf8')) as DbShape)
-    return parsed
+    return migrateDb(JSON.parse(readFileSync(DATA_FILE, 'utf8')) as DbShape)
   } catch {
     const fresh = seedDb()
-    writeDb(fresh)
+    await writeDb(fresh)
     return fresh
   }
 }
 
-export function writeDb(db: DbShape) {
+export async function writeDb(db: DbShape): Promise<void> {
+  if (IS_NETLIFY) {
+    const store = getStore({ name: BLOB_STORE, consistency: 'strong' })
+    await store.setJSON(BLOB_KEY, db)
+    return
+  }
+
   mkdirSync(DATA_DIR, { recursive: true })
   const tmp = `${DATA_FILE}.tmp`
   writeFileSync(tmp, JSON.stringify(db, null, 2), 'utf8')

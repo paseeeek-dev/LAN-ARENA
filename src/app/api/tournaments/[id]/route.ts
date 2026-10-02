@@ -4,8 +4,8 @@ import { readDb, teamView, tournamentView } from '@/lib/server/db'
 
 export async function GET(request: NextRequest, context:{params:Promise<{id:string}>}) {
   const { id } = await context.params
-  const { user } = authFromRequest(request)
-  const db = readDb()
+  const { user } = await authFromRequest(request)
+  const db = await readDb()
   const tournament = db.tournaments.find((t)=>t.id===id)
   if (!tournament) return NextResponse.json({error:'Турнир не найден.'},{status:404})
   const membership = user ? db.teamMembers.find((m)=>m.userId===user.id) || null : null

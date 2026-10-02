@@ -4,7 +4,7 @@ import { createId, writeDb } from '@/lib/server/db'
 
 export async function POST(request:NextRequest, context:{params:Promise<{id:string}>}) {
   const { id } = await context.params
-  const { db, user } = authFromRequest(request)
+  const { db, user } = await authFromRequest(request)
   if (!user) return NextResponse.json({error:'Сначала войди в аккаунт.'},{status:401})
   const tournament = db.tournaments.find((t)=>t.id===id)
   if (!tournament) return NextResponse.json({error:'Турнир не найден.'},{status:404})
@@ -21,6 +21,6 @@ export async function POST(request:NextRequest, context:{params:Promise<{id:stri
   const missing = ['1','2','3','4','5'].filter((p)=>!filled.has(p as any))
   if (missing.length) return NextResponse.json({error:`Для регистрации нужен полный состав. Не заняты позиции: ${missing.join(', ')}.`},{status:400})
   db.tournamentRegistrations.push({id:createId(),tournamentId:id,teamId:team.id,submittedBy:user.id,status:'PENDING',checkIn:'NOT_CHECKED_IN',createdAt:Date.now()})
-  writeDb(db)
+  await writeDb(db)
   return NextResponse.json({ok:true})
 }

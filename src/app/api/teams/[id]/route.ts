@@ -4,8 +4,8 @@ import { readDb, teamView } from '@/lib/server/db'
 
 export async function GET(request: NextRequest, context: { params: Promise<{ id:string }> }) {
   const { id } = await context.params
-  const { user } = authFromRequest(request)
-  const db = readDb()
+  const { user } = await authFromRequest(request)
+  const db = await readDb()
   const team = db.teams.find((item) => item.id === id)
   if (!team) return NextResponse.json({ error:'Команда не найдена.' }, { status:404 })
   const isCaptain = user?.id === team.captainUserId

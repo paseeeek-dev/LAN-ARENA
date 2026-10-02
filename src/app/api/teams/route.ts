@@ -5,8 +5,8 @@ import { createId, DotaPosition, readDb, teamView, writeDb } from '@/lib/server/
 const validPositions = new Set<DotaPosition>(['1','2','3','4','5','SUB'])
 
 export async function GET(request: NextRequest) {
-  const { user } = authFromRequest(request)
-  const db = readDb()
+  const { user } = await authFromRequest(request)
+  const db = await readDb()
   const teams = db.teams.map((team) => teamView(db, team))
   const myMembership = user ? db.teamMembers.find((member) => member.userId === user.id) || null : null
   const invites = user ? db.teamInvites.filter((invite) => invite.toUserId === user.id && invite.status === 'PENDING').map((invite) => ({ ...invite, team:db.teams.find((t)=>t.id===invite.teamId) })) : []
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const { db, user } = authFromRequest(request)
+  const { db, user } = await authFromRequest(request)
   if (!user) return NextResponse.json({ error:'Сначала войди в аккаунт.' }, { status:401 })
   if (db.teamMembers.some((member) => member.userId === user.id)) return NextResponse.json({ error:'Ты уже состоишь в команде.' }, { status:400 })
 
@@ -33,6 +33,6 @@ export async function POST(request: NextRequest) {
   db.teams.push(team)
   db.teamMembers.push({ id:createId(), teamId:team.id, userId:user.id, position, joinedAt:Date.now() })
   if (user.role === 'VIEWER') user.role = 'PLAYER'
-  writeDb(db)
+  await writeDb(db)
   return NextResponse.json({ team:teamView(db, team) }, { status:201 })
 }

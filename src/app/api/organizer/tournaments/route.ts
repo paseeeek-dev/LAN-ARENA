@@ -5,7 +5,7 @@ import { writeDb } from '@/lib/server/db'
 function allowed(user:any){return user && (user.role==='ADMIN'||user.role==='ORGANIZER')}
 
 export async function GET(request:NextRequest){
-  const {db,user}=authFromRequest(request)
+  const {db,user}=await authFromRequest(request)
   if(!allowed(user)) return NextResponse.json({error:'Нет доступа.'},{status:403})
   const registrations=db.tournamentRegistrations.map((r)=>({
     ...r,
@@ -16,7 +16,7 @@ export async function GET(request:NextRequest){
 }
 
 export async function PATCH(request:NextRequest){
-  const {db,user}=authFromRequest(request)
+  const {db,user}=await authFromRequest(request)
   if(!allowed(user)) return NextResponse.json({error:'Нет доступа.'},{status:403})
   const body=await request.json().catch(()=>({}))
   const action=String(body.action||'')
@@ -34,6 +34,6 @@ export async function PATCH(request:NextRequest){
     if(!['REGISTRATION','UPCOMING','LIVE','FINISHED'].includes(status)) return NextResponse.json({error:'Некорректный статус.'},{status:400})
     tournament.status=status as any
   } else return NextResponse.json({error:'Неизвестное действие.'},{status:400})
-  writeDb(db)
+  await writeDb(db)
   return NextResponse.json({ok:true})
 }

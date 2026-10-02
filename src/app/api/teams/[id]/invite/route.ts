@@ -6,7 +6,7 @@ const validPositions = new Set<DotaPosition>(['1','2','3','4','5','SUB'])
 
 export async function POST(request: NextRequest, context: { params: Promise<{ id:string }> }) {
   const { id } = await context.params
-  const { db, user } = authFromRequest(request)
+  const { db, user } = await authFromRequest(request)
   if (!user) return NextResponse.json({ error:'Сначала войди.' }, { status:401 })
   const team = db.teams.find((item)=>item.id===id)
   if (!team) return NextResponse.json({ error:'Команда не найдена.' }, { status:404 })
@@ -23,6 +23,6 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   if (db.teamMembers.some((member)=>member.userId===target.id)) return NextResponse.json({ error:'Этот игрок уже состоит в команде.' }, { status:400 })
   if (db.teamInvites.some((invite)=>invite.teamId===id && invite.toUserId===target.id && invite.status==='PENDING')) return NextResponse.json({ error:'Приглашение уже отправлено.' }, { status:409 })
   db.teamInvites.push({ id:createId(), teamId:id, fromUserId:user.id, toUserId:target.id, position, status:'PENDING', createdAt:Date.now() })
-  writeDb(db)
+  await writeDb(db)
   return NextResponse.json({ ok:true, player:{ id:target.id, username:target.username } })
 }

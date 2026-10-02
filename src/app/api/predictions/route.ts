@@ -4,13 +4,13 @@ import { randomUUID } from 'crypto'
 import { writeDb } from '@/lib/server/db'
 
 export async function GET(request: NextRequest) {
-  const { db, user } = authFromRequest(request)
+  const { db, user } = await authFromRequest(request)
   if (!user) return NextResponse.json({ predictions: [] })
   return NextResponse.json({ predictions: db.predictions.filter((item) => item.userId === user.id) })
 }
 
 export async function POST(request: NextRequest) {
-  const { db, user } = authFromRequest(request)
+  const { db, user } = await authFromRequest(request)
   if (!user) return NextResponse.json({ error: 'Сначала войди в аккаунт.' }, { status: 401 })
 
   const body = await request.json().catch(() => ({}))
@@ -30,6 +30,6 @@ export async function POST(request: NextRequest) {
   } else {
     db.predictions.push({ id: randomUUID(), userId: user.id, matchId, team, placedAt: Date.now(), status: 'PENDING', reward: 100 })
   }
-  writeDb(db)
+  await writeDb(db)
   return NextResponse.json({ ok: true })
 }

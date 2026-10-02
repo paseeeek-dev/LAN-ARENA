@@ -6,7 +6,7 @@ const validPositions = new Set<DotaPosition>(['1','2','3','4','5','SUB'])
 
 export async function POST(request: NextRequest, context: { params: Promise<{ id:string }> }) {
   const { id } = await context.params
-  const { db, user } = authFromRequest(request)
+  const { db, user } = await authFromRequest(request)
   if (!user) return NextResponse.json({ error:'Сначала войди.' }, { status:401 })
   const team = db.teams.find((item)=>item.id===id)
   if (!team) return NextResponse.json({ error:'Команда не найдена.' }, { status:404 })
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       db.teamJoinRequests.filter((item)=>item.userId===user.id && item.status==='PENDING').forEach((item)=>item.status='REJECTED')
       if (user.role==='VIEWER') user.role='PLAYER'
     } else invite.status='REJECTED'
-    writeDb(db)
+    await writeDb(db)
     return NextResponse.json({ ok:true })
   }
 
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       const target = db.users.find((candidate)=>candidate.id===requestItem.userId)
       if (target?.role==='VIEWER') target.role='PLAYER'
     } else requestItem.status='REJECTED'
-    writeDb(db)
+    await writeDb(db)
     return NextResponse.json({ ok:true })
   }
 
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     const userId = String(body.userId || '')
     if (userId === user.id) return NextResponse.json({ error:'Капитан не может удалить себя. Передача капитана будет отдельным этапом.' }, { status:400 })
     db.teamMembers = db.teamMembers.filter((member)=>!(member.teamId===id && member.userId===userId))
-    writeDb(db)
+    await writeDb(db)
     return NextResponse.json({ ok:true })
   }
 
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
     if (!member) return NextResponse.json({ error:'Игрок не найден в составе.' }, { status:404 })
     if (position !== 'SUB' && db.teamMembers.some((item)=>item.teamId===id && item.userId!==userId && item.position===position)) return NextResponse.json({ error:`Позиция ${position} уже занята.` }, { status:400 })
     member.position=position
-    writeDb(db)
+    await writeDb(db)
     return NextResponse.json({ ok:true })
   }
 
