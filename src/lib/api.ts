@@ -1,0 +1,6 @@
+export async function apiFetch<T>(url:string,options:RequestInit={}):Promise<T>{
+  const response=await fetch(url,{...options,credentials:'same-origin',headers:{'Content-Type':'application/json',...(options.headers||{})},cache:'no-store'})
+  const payload=await response.json().catch(()=>({}))
+  if(!response.ok)throw new Error(payload?.error||`Ошибка запроса (${response.status})`)
+  return payload as T
+}
